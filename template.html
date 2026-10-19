@@ -1,0 +1,141 @@
+<title>GBA Auction Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky budget bar on top, strategy fold, then one scannable price list. */
+:root{
+ --bg:#f6f4f0;--panel:#ffffff;--fg:#1c1f26;--muted:#646a76;--line:#e1ddd5;
+ --accent:#c8551b;--t:#1f7a4d;--t-bg:#e3f2ea;--v:#8a6a10;--v-bg:#f6efd9;--a:#b3261e;--a-bg:#f8e3e1;
+ --mine:#1f4f8a;--mine-bg:#e2ebf7;
+ --display:"Barlow Condensed","Arial Narrow",sans-serif;--body:"IBM Plex Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#14161b;--panel:#1d2027;--fg:#ecebe8;--muted:#9aa0ab;--line:#2d313a;
+ --accent:#ef7a3d;--t:#6fd19d;--t-bg:#173327;--v:#e4c25e;--v-bg:#352c12;--a:#f08a82;--a-bg:#3a1c1a;
+ --mine:#8db8f0;--mine-bg:#1b2c44;color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#14161b;--panel:#1d2027;--fg:#ecebe8;--muted:#9aa0ab;--line:#2d313a;
+ --accent:#ef7a3d;--t:#6fd19d;--t-bg:#173327;--v:#e4c25e;--v-bg:#352c12;--a:#f08a82;--a-bg:#3a1c1a;
+ --mine:#8db8f0;--mine-bg:#1b2c44;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px;display:grid;gap:8px}
+.stats{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+.stat b{font-family:var(--display);font-size:28px;font-variant-numeric:tabular-nums;line-height:1}
+.stat span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat.key b{color:var(--accent)}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+input[type=search]{flex:1 1 160px;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+.f{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);cursor:pointer}
+.f[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-family:var(--display);font-size:34px;margin:18px 0 2px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 12px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-block:10px}
+summary{cursor:pointer;font-weight:600}
+details ul{padding-left:18px;margin:8px 0}details li{margin-block:4px;max-width:68ch}
+.list{display:grid;gap:0;margin-top:8px}
+.row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:var(--panel)}
+.rk{font-family:var(--display);font-size:18px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.who{min-width:0}
+.nm{font-weight:600}.tm{color:var(--muted);font-size:12px;margin-left:4px}
+.note{color:var(--muted);font-size:12.5px;margin-top:2px}
+.px{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.px .max{font-family:var(--display);font-size:22px;line-height:1}
+.px .fair{font-size:11px;color:var(--muted)}
+.chip{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.chip.T{color:var(--t);background:var(--t-bg)}.chip.V{color:var(--v);background:var(--v-bg)}.chip.A{color:var(--a);background:var(--a-bg)}
+.chip.M{color:var(--mine);background:var(--mine-bg)}
+.row.gone{opacity:.38}.row.gone .nm{text-decoration:line-through}
+.row.mine{background:var(--mine-bg)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--panel);border-top:1px solid var(--line);padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;box-shadow:0 -6px 24px rgba(0,0,0,.15)}
+.sheet .t{font-weight:600}
+.sheet .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sheet input{width:80px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.btn{font:inherit;font-weight:600;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.foot{color:var(--muted);font-size:12px;margin-top:18px;max-width:68ch}
+.empty{padding:24px 4px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+ <div class="bar">
+  <div class="stats">
+   <div class="stat key"><b id="maxbid">$288</b><span>Max bid now</span></div>
+   <div class="stat"><b id="left">$300</b><span>Budget left</span></div>
+   <div class="stat"><b id="spots">13</b><span>Spots left</span></div>
+   <div class="stat"><b id="avg">$23</b><span>Avg per spot</span></div>
+  </div>
+  <div class="controls">
+   <input type="search" id="q" placeholder="Find a player or team" aria-label="Find a player or team">
+   <button class="f" data-f="all" aria-pressed="true">All</button>
+   <button class="f" data-f="T" aria-pressed="false">Targets</button>
+   <button class="f" data-f="V" aria-pressed="false">Value only</button>
+   <button class="f" data-f="A" aria-pressed="false">Avoid</button>
+   <button class="f" data-f="open" aria-pressed="false">Still open</button>
+   <button class="f" data-f="mine" aria-pressed="false">My team</button>
+  </div>
+ </div>
+
+ <h1>GBA 2026-27 Auction Board</h1>
+ <p class="sub">9 teams, $300 each, 10-cat roto. Big number = your max bid. Small number = fair price. Tap a player to mark him gone or yours.</p>
+
+ <details open>
+  <summary>Game plan</summary>
+  <ul>
+   <li><b>Spend on two stars, then hunt value.</b> Nine teams is shallow, so the waiver wire stays deep all year. Put about $150 into two top-15 guys, about $100 into three or four $20-35 players, and fill the rest at $1-3.</li>
+   <li><b>Stay balanced.</b> Roto rewards every category, so don't punt. Bank FG% with bigs who don't hurt you (Gobert, Kessler, Edey, Sabonis) to offset guards like Edwards, LaMelo and Trae.</li>
+   <li><b>Nominate what you don't want first.</b> Embiid, Tatum, Kyrie, Paul George, Brunson and Lakers names. Let the room spend its money early.</li>
+   <li><b>Your best values on this list:</b> Jaylen Brown, Banchero, Garland, NAW, Randle, Herro, Rollins, Keyonte. Late at $1-3: Kuminga, Ace Bailey, Bey, Vucevic, Gui Santos, Ayton, Dybantsa.</li>
+   <li><b>Never break the max-bid number</b> at the top. It keeps $1 for every open spot.</li>
+   <li><b>"DD" on your depth chart is ESPN's day-to-day tag.</b> Jalen Johnson, Chet, Derrick White, Sabonis, Markkanen, Tatum and others carry it. Check news before going big on any of them.</li>
+  </ul>
+ </details>
+
+ <div class="list" id="list"></div>
+ <p class="foot">Order: Rotoworld 2026-27 preseason 9-cat top 200, plus four late flyers from your notes. Prices assume 13-man rosters (117 players, $2,700 in the room). Targets get a max about 12% over fair, value-only players are capped at fair, and avoids at 75% of fair. If your 10th category is double-doubles, bump the bigs and Giddey a dollar or two. If it is 3P%, bump the shooters (Knueppel, Curry, NAW) and trim the non-shooting bigs. Your marks are saved in this browser only.</p>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+ <div class="t" id="st"></div>
+ <div class="acts">
+  <label for="paid">Paid $</label><input id="paid" type="number" min="1" inputmode="numeric">
+  <button class="btn pri" id="bMine">Mine</button>
+  <button class="btn" id="bGone">Gone to someone else</button>
+  <button class="btn" id="bClear">Clear</button>
+  <button class="btn" id="bClose">Close</button>
+ </div>
+</div>
+
+<script>
+const P = __DATA__;
+const BUDGET=300, ROSTER=13;
+let S={}; try{S=JSON.parse(localStorage.getItem("gba26")||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem("gba26",JSON.stringify(S))}catch(e){}};
+let F="all", cur=null;
+const $=id=>document.getElementById(id);
+function totals(){let spent=0,n=0;for(const k in S){if(S[k].s==="mine"){spent+=S[k].p||0;n++}}
+ const left=BUDGET-spent, spots=Math.max(0,ROSTER-n);
+ $("left").textContent="$"+left;$("spots").textContent=spots;
+ $("maxbid").textContent="$"+(spots?Math.max(0,left-(spots-1)):0);
+ $("avg").textContent="$"+(spots?Math.round(left/spots):0);}
+function render(){const q=$("q").value.trim().toLowerCase();const L=$("list");L.innerHTML="";let shown=0;
+ for(const p of P){const st=S[p.n]?.s;
+  if(q&&!(p.n+" "+p.t).toLowerCase().includes(q))continue;
+  if(F==="T"||F==="V"||F==="A"){if(p.g!==F)continue}
+  if(F==="open"&&st)continue; if(F==="mine"&&st!=="mine")continue;
+  const d=document.createElement("div");d.className="row"+(st==="gone"?" gone":st==="mine"?" mine":"");d.tabIndex=0;
+  const tagTxt={T:"Target",V:"Value only",A:"Avoid"}[p.g];
+  d.innerHTML=`<div class="rk">${p.r}</div><div class="who"><span class="nm"></span><span class="tm">${p.t}</span>${tagTxt?`<span class="chip ${p.g}">${tagTxt}</span>`:""}${st==="mine"?`<span class="chip M">Mine $${S[p.n].p||"?"}</span>`:""}<div class="note"></div></div><div class="px"><div class="max">$${p.m}</div><div class="fair">fair $${p.f}</div></div>`;
+  d.querySelector(".nm").textContent=p.n;d.querySelector(".note").textContent=p.x;
+  d.onclick=()=>openSheet(p);d.onkeydown=e=>{if(e.key==="Enter")openSheet(p)};L.appendChild(d);shown++}
+ if(!shown)L.innerHTML='<div class="empty">No players match. Clear the search or pick another filter.</div>';totals();}
+function openSheet(p){cur=p;$("st").textContent=`${p.n} (${p.t}) · max $${p.m}, fair $${p.f}`;$("paid").value=S[p.n]?.p||"";$("sheet").hidden=false;}
+$("bMine").onclick=()=>{const v=parseInt($("paid").value,10);S[cur.n]={s:"mine",p:isNaN(v)?0:v};save();$("sheet").hidden=true;render()};
+$("bGone").onclick=()=>{S[cur.n]={s:"gone"};save();$("sheet").hidden=true;render()};
+$("bClear").onclick=()=>{delete S[cur.n];save();$("sheet").hidden=true;render()};
+$("bClose").onclick=()=>{$("sheet").hidden=true};
+$("q").oninput=render;
+document.querySelectorAll(".f").forEach(b=>b.onclick=()=>{F=b.dataset.f;document.querySelectorAll(".f").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+render();
+</script>
